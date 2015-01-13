@@ -1,8 +1,8 @@
 
 //Include the library LedControl
 #include "LedControl.h"
+#include "chess_constants.h"
 
-LedControl lc=LedControl(10,8,9,1);
 
 
 /* Define the pins */
@@ -18,9 +18,9 @@ LedControl lc=LedControl(10,8,9,1);
 
 
 /* Arrays for the sensor matrix states */
-boolean current_state[8][8] = { {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}};
-boolean delta_state[8][8]   = { {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}};
-boolean led_matrix[8][8]    = { {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}};
+boolean current_state[8][8] = { {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0} };
+boolean delta_state[8][8]   = { {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0} };
+boolean led_matrix[8][8]    = { {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0} };
 
 /* Delta threshold for recognizing a real delta occuring */
 #define delta_threshold 2
@@ -37,99 +37,14 @@ byte move_buffer[128] = {0};
 byte temp_move_buffer[128] = {0};
 
 
-// Define directions
-
-#define NORTH  16
-#define NN    ( NORTH + NORTH )
-#define SOUTH -16
-#define SS    ( SOUTH + SOUTH )
-#define EAST    1
-#define WEST   -1
-#define NE     17
-#define SW    -17
-#define NW     15
-#define SE    -15
-  
-
-  
-// Constants for pieces, while last bit stands for its color
-// ENCODING:    
-//              pppcs
-// 
-// p: Piece type, 3 bits
-// c: Color, 0 = white, 1 = black
-// s: Sliding, 0 none-sliding, 1 sliding
-
-
-const byte W_PAWN   = B00000;
-const byte W_ROOK   = B00101;
-const byte W_KNIGHT = B01000;
-const byte W_BISHOP = B01101;
-const byte W_KING   = B10000;
-const byte W_QUEEN  = B10101;
-const byte B_PAWN   = B00010;
-const byte B_ROOK   = B00111;
-const byte B_KNIGHT = B01010;
-const byte B_QUEEN  = B10111;
-const byte B_BISHOP = B01111;
-const byte B_KING   = B10010;
-const byte NO_PIECE = B11111;
-
-// General piece types:
-
-const byte PAWN   = B000;
-const byte ROOK   = B001;
-const byte KNIGHT = B010;
-const byte BISHOP = B011;
-const byte KING   = B100;
-const byte QUEEN  = B101;
-
-// Buffers for undoing moves
-byte captured_buffer = NO_PIECE;
-int  from_buffer    = -1;
-int  to_buffer      = -1;
-
-// Move deltas. Define the index-deltas for different figures
-// Index of move vector defined by the peace bit representation
-
-const int move_deltas[6][8] = {
-  { 0 },                                        // pawn: Handled differently
-  { WEST, SOUTH, EAST,  NORTH, 0, 0, 0, 0},     // rook
-  {-18, -33, -31, -14,  18,  33,  31,  14},     // knight very special movements
-  {SE, SW, NW, NE, 0, 0, 0, 0},                 // bishop
-  {SE, SW, NW, NE, WEST, SOUTH, EAST, NORTH},   // king
-  {SE, SW, NW, NE, WEST, SOUTH, EAST, NORTH}    // queen
-};
-
-// Attack vectors
-// Taken from http://mediocrechess.blogspot.de/2006/12/guide-attacked-squares.html
-// Jonathan offer a great overview of the 0x88 representation.
-
-const int ATTACK_NONE  = 0;
-const int ATTACK_KQR   = 1;
-const int ATTACK_QR    = 2;
-const int ATTACK_KQBwP = 3;
-const int ATTACK_KQBbP = 4;
-const int ATTACK_QB    = 5;
-const int ATTACK_N     = 6;
-
-const int attack_array[257] =
-  {0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,2,0,0,0,   
-   0,0,0,5,0,0,5,0,0,0,0,0,2,0,0,0,0,0,5,0,  
-   0,0,0,5,0,0,0,0,2,0,0,0,0,5,0,0,0,0,0,0, 
-   5,0,0,0,2,0,0,0,5,0,0,0,0,0,0,0,0,5,0,0,
-   2,0,0,5,0,0,0,0,0,0,0,0,0,0,5,6,2,6,5,0,   
-   0,0,0,0,0,0,0,0,0,0,6,4,1,4,6,0,0,0,0,0,  
-   0,2,2,2,2,2,2,1,0,1,2,2,2,2,2,2,0,0,0,0,     
-   0,0,6,3,1,3,6,0,0,0,0,0,0,0,0,0,0,0,5,6,    
-   2,6,5,0,0,0,0,0,0,0,0,0,0,5,0,0,2,0,0,5,   
-   0,0,0,0,0,0,0,0,5,0,0,0,2,0,0,0,5,0,0,0,     
-   0,0,0,5,0,0,0,0,2,0,0,0,0,5,0,0,0,0,5,0,    
-   0,0,0,0,2,0,0,0,0,0,5,0,0,5,0,0,0,0,0,0,   
-   2,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0 };
-
-
-void init_board(){
+/*
+ * Function: cm_initBoard
+ * --------------------------------------------------
+ * Creates an initial placement of the pieces
+ * in the global board array, regarding chess rules.
+ */ 
+ 
+void cm_initBoard(){
   for(int i = 1; i < 128; i++) board[i] = NO_PIECE;
   // Set up white pieces
   board[0] = W_ROOK;  board[1] = W_KNIGHT; board[2] = W_BISHOP; 
@@ -144,8 +59,21 @@ void init_board(){
 }
 
 
-
-void makeMove(int from, int to){
+/*
+ * Function: makeMove
+ * --------------------------------------------------
+ * Moves the piece from one field to another. Take 
+ * to be sure that the pieces exists, the function 
+ * does not check that. Stores essential information
+ * (captured, move itself, etc...) in global buffers.
+ *
+ * from:  0x88 coordinates in the global board array 
+ *        defining the figure that has to be moved.
+ * to:    0x88 coordinates  in the global board array 
+ *        defining where the figure in from is moved to.
+ */ 
+ 
+void cm_makeMove(int from, int to){
   from_buffer = from;
   to_buffer = to;
   byte piece_from = board[from];
@@ -155,7 +83,16 @@ void makeMove(int from, int to){
   captured_buffer = piece_to;  
 }
 
-void unmakeMove(){
+/*
+ * Function: unmakeMove
+ * --------------------------------------------------
+ * Makes the former move undone in the global board
+ * array.
+ * The function does not ensure if there is a move in
+ * the buffers, undefined behavior if not!
+ */
+ 
+void cm_unmakeMove(){
   byte piece = board[to_buffer];
   board[to_buffer] = captured_buffer;
   board[from_buffer] = piece;
@@ -164,42 +101,98 @@ void unmakeMove(){
   to_buffer   = -1;
 }
 
+/*
+ * Function: cm_getKingIndex
+ * --------------------------------------------------
+ * Finds the king of the given color and returns its
+ * index in the global board.
+ *
+ * color:   Color of the searched king 
+ *          0 = white, 1 = black
+ * 
+ * returns: 0x88 coordinate of the king on the board.
+ *          -1 if no king present.
+ */
 
-int getKingIndex(int color){
+int cm_getKingIndex(int color){
   byte king = color ? B_KING : W_KING;
   int index;
   for(int i = 0; i < 64; i++){
     index = i + (i & ~7); 
     if(board[index] == king) return index;  
   }
+  return -1;
 }
 
-int isLegitMove(int from, int to){
+/*
+ * Function: cm_isLegalMove
+ * --------------------------------------------------
+ * Returns if a move is legit. Therefore, it makes a 
+ * move on the board, checks if legit (king in check?)
+ * and unmakes the move.
+ *
+ * from:     0x88 coordinates in the global board array 
+ *           defining the figure that has to be moved.
+ * to:       0x88 coordinates  in the global board array 
+ *           defining where the figure in from is moved to.
+ * 
+ * returns:  Return 1 if the move is legit, 0 if not
+ */
+
+int cm_isLegalMove(int from, int to){
   int color = board[from] >> 1 & 1;
   int otherColor = color ? 0 : 1;
-  makeMove(from, to);
-  int index = getKingIndex(color);
-  int result = !isAttacked(index, otherColor);
-  unmakeMove();
+  cm_makeMove(from, to);
+  int index = cm_getKingIndex(color);
+  int result = !cm_isAttacked(index, otherColor);
+  cm_unmakeMove();
   return result;
 }
 
+/*
+ * Function: cm_filterLegalMoves
+ * --------------------------------------------------
+ * Takes a buffer of psuedo-legal moves and an index 
+ * of a piece and checks the moves to be legal. 
+ * Illegal moves get deleted from the moves array.
+ *
+ * index:    0x88 coordinates of the piece
+ * buffer:   Buffer of pseudo-legal moves, may
+ *           containing check violations etc. Moves
+ *           are directly delete from this pointer.
+ */
 
-int filterLegitMoves(int index, byte * buffer){
+void cm_filterLegalMoves(int index, byte * buffer){
   int _index;
   for(int i = 0; i < 64; i++){
     _index = i + (i & ~7); 
     if(buffer[_index])
-        if(!isLegitMove(index, _index)) buffer[_index] = 0;
+        if(!cm_isLegalMove(index, _index)) buffer[_index] = 0;
   }
 }
 
+/*
+ * Function: cm_isAttacked
+ * --------------------------------------------------
+ * Checks if a given square is attacked by a 
+ * specified color. This method uses a precalculated
+ * attack array, defining which pieces can 
+ * attack the unique 0x88 square to square difference.
+ * The lookup avoids generation of unnecessary pseudo-
+ * legal moves. Operates on the global board array.
+ *
+ * index:     0x88 coordinates of the square
+ * byColor:   Color of the attacker.
+ *            0 = white, 1 = black
+ *
+ * returns:   int defining if it is attackable or not.
+ *            1 = attackable, 0 = not attackable.
+ */
 
-int isAttacked(int index, int byColor){
+int cm_isAttacked(int index, int byColor){
   int _index, diff, res;
-
   for(int i = 0; i < 64; i++){
-    _index = i + (i & ~7); 
+    _index = i + (i & ~7);   // coordinate transformation to 0x88
     byte piece = board[_index];
     byte piece_type = piece >> 2;
     if((piece >> 1 & 1) == byColor){  
@@ -207,27 +200,27 @@ int isAttacked(int index, int byColor){
       switch( attack_array[diff] ) {
         case ATTACK_KQR:
           if(piece_type == KING || piece_type == QUEEN || piece_type == ROOK)
-            res = canReach(_index, index);
+            res = cm_canReach(_index, index);
           break;
         case ATTACK_QR:
           if(piece_type == QUEEN || piece_type == ROOK)
-            res = canReach(_index, index);
+            res = cm_canReach(_index, index);
           break;
         case ATTACK_KQBwP:
           if(piece_type == KING || piece_type == QUEEN || piece_type == BISHOP || piece == W_PAWN)
-            res = canReach(_index, index);
+            res = cm_canReach(_index, index);
           break;
         case ATTACK_KQBbP:
           if(piece_type == KING || piece_type == QUEEN || piece_type == BISHOP || piece == B_PAWN)
-            res = canReach(_index, index);
+            res = cm_canReach(_index, index);
           break;
         case ATTACK_QB:
           if(piece_type == BISHOP || piece_type == QUEEN) 
-            res = canReach(_index, index);
+            res = cm_canReach(_index, index);
           break;
         case ATTACK_N:
           if(piece_type == KNIGHT)
-            res = canReach(_index, index);
+            res = cm_canReach(_index, index);
           break;
         default:
           res = 0;
@@ -238,36 +231,74 @@ int isAttacked(int index, int byColor){
   return 0;
 }
 
-int canReach(int index, int target){
-  memset(temp_move_buffer,0, 128 * sizeof(byte));
-  byte piece = board[index];
-  byte piece_type = piece >> 2;
+/*
+ * Function: cm_canReach
+ * --------------------------------------------------
+ * Determine if a piece on a specific square can 
+ * reach a target square in a pseudo-legal manner.
+ * The function calls the generation of moves with
+ * a temporal buffer.
+ *
+ * index:     0x88 coordinates of the piece
+ * target:    0x88 coordinates of the target square
+ *
+ * returns:   int defining if the given piece can 
+ *            reach the target or not.
+ *            1 = reachable, 0 = not reachable.
+ */
 
-  if(piece_type == PAWN){
-    generatePseudoLegalPawnMoves(piece, index, temp_move_buffer);
-  } else if (piece_type == KING) {
-    // DO KING STUFF HERE
-  } else { // everything but a pawn and king
-    generatePseudoLegalMoves(board[index], index, temp_move_buffer );
-    return temp_move_buffer[target]; 
-  }
-  return 0;
+int cm_canReach(int index, int target){
+  cm_pseudoLegalMoves(index, temp_move_buffer);
+  return temp_move_buffer[target]; 
 }
 
-void pseudoLegalMoves(int index, byte * buffer){
+/*
+ * Function: cm_pseudoLegalMoves
+ * --------------------------------------------------
+ * Generates the pseudo-legal moves of the piece at
+ * index. Operates on the global board array and writes
+ * the results in a buffer. Calls specific subroutines 
+ * for PAWNS, KINGS and the rest.
+ *
+ * index:     0x88 coordinates of the piece
+ * buffer:    Buffer defining the movements. Each 
+ *            field in the 128 byte array is either
+ *            marked 1 for a possible move target or
+ *            0 for not reachable.
+ */
+
+void cm_pseudoLegalMoves(int index, byte * buffer){
   memset(buffer,0, 128 * sizeof(byte));
   byte piece = board[index];
   byte piece_type = piece >> 2;
   if(piece_type == PAWN){
-    generatePseudoLegalPawnMoves(piece, index, buffer);
+    cm_generatePseudoLegalPawnMoves(piece, index, buffer);
   } else if (piece_type == KING) {
     // DO KING STUFF HERE
   } else { // everything but a pawn and king
-    generatePseudoLegalMoves(piece, index, buffer);
+    cm_generatePseudoLegalMoves(piece, index, buffer);
   }
 }
 
-void generatePseudoLegalMoves(byte piece, int index, byte * buffer){
+/*
+ * Function: cm_generatePseudoLegalMoves
+ * --------------------------------------------------
+ * Generates the pseudo-legal moves of the piece at
+ * index. Specialized routine for QUEEN, ROOK, KNIGHT,
+ * BISHOP. Operates on global board array.
+ *
+ * piece:     byte describing the piece. Important 
+ *            for color and sliding attribute. Only
+ *            Q,R,K,B are allowed, undefined behavior 
+ *            else.
+ * index:     0x88 coordinates of the piece
+ * buffer:    Buffer defining the movements. Each 
+ *            field in the 128 byte array is either
+ *            marked 1 for a possible move target or
+ *            0 for not reachable.
+ */
+
+void cm_generatePseudoLegalMoves(byte piece, int index, byte * buffer){
   const int * md = move_deltas[piece >> 2];
   byte sliding = piece & B1;
   byte color   = piece & B10;
@@ -290,16 +321,53 @@ void generatePseudoLegalMoves(byte piece, int index, byte * buffer){
   }    
 }
 
-void generatePseudoLegalPawnMoves(byte piece, int index, byte * buffer){
+
+/*
+ * Function: cm_generatePseudoLegalPawnMoves
+ * --------------------------------------------------
+ * Generates the pseudo-legal moves for pawns. 
+ * Calls straight and capture subroutines.
+ * Operates on global board array.
+ *
+ * piece:     byte describing the piece. Important 
+ *            for color. Every passed piece is handled
+ *            as a pawn.
+ * index:     0x88 coordinates of the piece
+ * buffer:    Buffer defining the movements. Each 
+ *            field in the 128 byte array is either
+ *            marked 1 for a possible move target or
+ *            0 for not reachable.
+ */
+
+void cm_generatePseudoLegalPawnMoves(byte piece, int index, byte * buffer){
   byte color = piece >> 1 & 1;
   // Get the direction of the pieces!
   int dir = color ? -1 : 1;
   int starting_row = color ? 6 : 1;
-  straightPawnMove(dir, index, starting_row, buffer);
-  capturePawnMove(dir, index, color, buffer);
+  cm_straightPawnMove(dir, index, starting_row, buffer);
+  cm_capturePawnMove(dir, index, color, buffer);
 }
 
-void straightPawnMove(int dir, int index, int starting_row, byte * buffer){
+
+/*
+ * Function: cm_straightPawnMove
+ * --------------------------------------------------
+ * Generates pseudo-legal straight pawn moves. 
+ * Handles two field move from initial position.
+ * Every incomming piece is handled as a pawn.
+ * Operates on global board array.
+ *
+ * dir:       Defining direction, 1 = white (to top)
+ *            -1 = black (to bottom).
+ * starting_row: defines the row of initial position
+ * index:     0x88 coordinate of the pawn
+ * buffer:    Buffer defining the movements. Each 
+ *            field in the 128 byte array is either
+ *            marked 1 for a possible move target or
+ *            0 for not reachable.
+ */
+
+void cm_straightPawnMove(int dir, int index, int starting_row, byte * buffer){
   if(board[index + (dir * NORTH)] == NO_PIECE){
     buffer[index + (dir * NORTH)] = 1;
     if(index / 16 == starting_row  && board[index + (dir * NN)] == NO_PIECE){
@@ -308,7 +376,24 @@ void straightPawnMove(int dir, int index, int starting_row, byte * buffer){
   }
 }
 
-void capturePawnMove(int dir, int index, int color, byte * buffer){
+/*
+ * Function: cm_capturePawnMove
+ * --------------------------------------------------
+ * Generates pseudo-legal pawn captures. 
+ * Every incomming piece is handled as a pawn.
+ * Operates on global board array.
+ *
+ * dir:       Defining direction, 1 = white (to top)
+ *            -1 = black (to bottom).
+ * index:     0x88 coordinate of the pawn
+ * color:     defines the color of the pawn (w=0,b=1)
+ * buffer:    Buffer defining the movements. Each 
+ *            field in the 128 byte array is either
+ *            marked 1 for a possible move target or
+ *            0 for not reachable.
+ */
+
+void cm_capturePawnMove(int dir, int index, int color, byte * buffer){
   int  attack_index = index + (dir * NW);
   byte attack_piece = board[attack_index];
   if(attack_piece != NO_PIECE && (attack_piece & B10) != color)
@@ -320,37 +405,93 @@ void capturePawnMove(int dir, int index, int color, byte * buffer){
 }
 
 
+/*********************************************************************
+****************            LED Control         **********************
+*********************************************************************/
+
+
+
+LedControl lc=LedControl(10,8,9,1);
+
+/*
+ * Function: lc_setupLc
+ * --------------------------------------------------
+ * Setup the led control module at startup
+ */
+
+void lc_setupLc(){    
+  lc.setLed(0, 0, 0, true);
+  lc.shutdown(0,false);
+  lc.setIntensity(0,15);
+  lc.clearDisplay(0);
+}
+
+
+/*
+ * Function: lc_initLights
+ * --------------------------------------------------
+ * Play fancy lighteffects. Directly uses the 
+ * LedControl library.
+ *
+ * myDelay:  int defining the delay between steps
+ */
+ 
+void lc_initLights(int myDelay){
+  for(int row=0;row<8;row++) {
+    for(int col=0;col<8;col++) {
+      lc.setLed(0,row,col,true);
+      delay(myDelay); }}
+  for(int i = 0; i < 16; i++){lc.setIntensity(0,15 - i); delay(myDelay);}
+  for(int i = 0; i < 16; i++){lc.setIntensity(0,i);      delay(myDelay);}
+  for(int i = 0; i < 16; i++){lc.setIntensity(0,15 - i); delay(myDelay);}
+  for(int i = 0; i < 16; i++){lc.setIntensity(0,i);      delay(myDelay);}
+  for(int i = 0; i < 16; i++){lc.setIntensity(0,15 - i); delay(myDelay);}
+  for(int i = 0; i < 16; i++){lc.setIntensity(0,i);      delay(myDelay);}
+  for(int row=0;row<8;row++) {
+      for(int col=0;col<8;col++) {
+        lc.setLed(0,row,col,false);
+        delay(myDelay);}}
+}
+
 
 /*
 *     TECHNICAL RELATED STUFF
 */
 
 void setup() {
+  
+  setupPins();
+  Serial.begin(9600);      // open the serial port at 9600 bps:    
+
+  lc_setupLc();
+  lc_initLights(20);
+ 
+  cm_init_board();
+
+  board[83] = W_KNIGHT;
+  cm_pseudoLegalMoves(98, move_buffer);
+  cm_filterLegalMoves(98, move_buffer);
+  
+  moveBufferToLED();
+}
+
+
+/*
+ * Function: setupPins
+ * --------------------------------------------------
+ * Set up arduino pins using constants
+ */
+
+void setupPins(){
   pinMode(MUX_ONE   , OUTPUT);  
   pinMode(MUX_TWO   , OUTPUT);  
   pinMode(MUX_THREE , OUTPUT);  
   pinMode(DMUX_ONE  , OUTPUT);  
   pinMode(DMUX_TWO  , OUTPUT);  
   pinMode(DMUX_THREE, OUTPUT); 
-  Serial.begin(9600);      // open the serial port at 9600 bps:    
-  
   pinMode(HALLIN, INPUT_PULLUP); 
-  lc.setLed(0, 0, 0, true);
-
-  lc.shutdown(0,false);
-  lc.setIntensity(0,15);
-  lc.clearDisplay(0);
-  
-//  initLights();
-  init_board();
-
-  board[83] = W_KNIGHT;
-  pseudoLegalMoves(98, move_buffer);
-  filterLegitMoves(98, move_buffer);
-  
-  moveBufferToLED();
-
 }
+
 
 void moveBufferToLED(){
   // Movebuffer is 0x88, so transform it!
@@ -416,30 +557,7 @@ void doTheFancyLights(){
   }  
 }
 
-/* Cool initial light effects */
-void initLights(){
-  int myDelay = 20;
-  for(int row=0;row<8;row++) {
-    for(int col=0;col<8;col++) {
-      lc.setLed(0,row,col,true);
-      delay(myDelay);     
-    }
-  }
-  
-  for(int i = 0; i < 16; i++){lc.setIntensity(0,15 - i); delay(myDelay);}
-  for(int i = 0; i < 16; i++){lc.setIntensity(0,i);      delay(myDelay);}
-  for(int i = 0; i < 16; i++){lc.setIntensity(0,15 - i); delay(myDelay);}
-  for(int i = 0; i < 16; i++){lc.setIntensity(0,i);      delay(myDelay);}
-  for(int i = 0; i < 16; i++){lc.setIntensity(0,15 - i); delay(myDelay);}
-  for(int i = 0; i < 16; i++){lc.setIntensity(0,i);      delay(myDelay);}
-  
-  for(int row=0;row<8;row++) {
-      for(int col=0;col<8;col++) {
-        lc.setLed(0,row,col,false);
-        delay(myDelay);
-      }
-    }
-}
+
 
 void loop() {
     readSensors();
